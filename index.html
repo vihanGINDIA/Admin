@@ -1,0 +1,538 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dev Dashboard - EduChess</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: 'Franklin Gothic Medium', 'Arial Narrow', Arial, sans-serif;
+            background: rgb(247, 249, 247);
+            min-height: 100vh;
+            color: rgb(30, 40, 33);
+            position: relative;
+        }
+
+        .check-bg {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background-image:
+                linear-gradient(45deg, rgba(22, 140, 60, 0.03) 25%, transparent 25%),
+                linear-gradient(-45deg, rgba(22, 140, 60, 0.03) 25%, transparent 25%),
+                linear-gradient(45deg, transparent 75%, rgba(22, 140, 60, 0.03) 75%),
+                linear-gradient(-45deg, transparent 75%, rgba(22, 140, 60, 0.03) 75%);
+            background-size: 60px 60px;
+            background-position: 0 0, 0 30px, 30px -30px, -30px 0px;
+            pointer-events: none; z-index: 0;
+        }
+
+        .wrap { position: relative; z-index: 1; max-width: 1100px; margin: 0 auto; padding: 2rem 1.5rem 4rem; }
+
+        header.topbar {
+            display: flex; align-items: center; justify-content: space-between;
+            flex-wrap: wrap; gap: 1rem; margin-bottom: 1.5rem;
+        }
+        header.topbar .brand h1 {
+            font-family: 'PT Serif', serif; color: rgb(15, 100, 42); font-size: 1.8rem;
+        }
+        header.topbar .brand p {
+            font-family: 'Courier New', Courier, monospace; color: rgb(22, 140, 60); font-size: 0.85rem;
+        }
+        .actions { display: flex; gap: 0.6rem; flex-wrap: wrap; }
+
+        button {
+            font-family: 'Franklin Gothic Medium', Arial, sans-serif;
+            cursor: pointer; border: none; border-radius: 8px;
+            padding: 0.6rem 1.1rem; font-size: 0.9rem; transition: all 0.2s ease;
+        }
+        .btn-primary { background: rgb(22, 140, 60); color: #fff; }
+        .btn-primary:hover { background: rgb(15, 100, 42); }
+        .btn-ghost { background: #fff; color: rgb(22, 140, 60); border: 1px solid rgba(22,140,60,0.3); }
+        .btn-ghost:hover { background: rgb(238, 245, 240); }
+        .btn-danger { background: #fff; color: #b3261e; border: 1px solid rgba(179,38,30,0.35); padding: 0.4rem 0.8rem; font-size: 0.82rem; }
+        .btn-danger:hover { background: #fce8e6; }
+        .btn-danger-solid { background: #b3261e; color: #fff; }
+        .btn-danger-solid:hover { background: #8c1d18; }
+
+        .stats { display: flex; gap: 1rem; flex-wrap: wrap; margin-bottom: 1.5rem; }
+        .stat {
+            background: #fff; border: 1px solid rgba(22,140,60,0.12); border-radius: 12px;
+            padding: 1rem 1.3rem; min-width: 150px; box-shadow: 0 4px 16px rgba(22,140,60,0.06);
+        }
+        .stat .num { font-family: 'PT Serif', serif; font-size: 1.9rem; color: rgb(15, 100, 42); }
+        .stat .lbl { font-size: 0.8rem; color: #6a766d; text-transform: uppercase; letter-spacing: 0.05em; }
+
+        .tabs { display: flex; gap: 0.4rem; background: rgb(238, 245, 240); padding: 0.3rem; border-radius: 10px; margin-bottom: 1.5rem; max-width: 460px; }
+        .tab-btn { flex: 1; background: transparent; color: rgb(22, 140, 60); border-radius: 7px; }
+        .tab-btn.active { background: rgb(22, 140, 60); color: #fff; }
+
+        .panel { display: none; }
+        .panel.active { display: block; animation: fadeIn 0.3s ease; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+
+        .card {
+            background: #fff; border: 1px solid rgba(22,140,60,0.12); border-radius: 14px;
+            box-shadow: 0 6px 24px rgba(22,140,60,0.06); overflow: hidden; margin-bottom: 1.5rem;
+        }
+        .card-head {
+            display: flex; align-items: center; justify-content: space-between;
+            padding: 1rem 1.3rem; border-bottom: 1px solid rgba(22,140,60,0.1);
+        }
+        .card-head h2 { font-family: 'PT Serif', serif; color: rgb(15, 100, 42); font-size: 1.2rem; }
+
+        table { width: 100%; border-collapse: collapse; font-size: 0.88rem; }
+        th, td { text-align: left; padding: 0.75rem 1.3rem; border-bottom: 1px solid rgba(22,140,60,0.07); vertical-align: middle; }
+        th { background: rgb(244, 249, 246); color: rgb(15, 100, 42); font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.04em; }
+        tbody tr:hover { background: rgba(22,140,60,0.03); }
+        td.mono, th.mono { font-family: 'Courier New', Courier, monospace; }
+
+        .pill { display: inline-block; padding: 0.18rem 0.6rem; border-radius: 999px; font-size: 0.72rem; font-weight: 600; }
+        .pill-ok { background: #e6f4ea; color: rgb(15, 100, 42); }
+        .pill-exp { background: #fce8e6; color: #b3261e; }
+        .pill-pending { background: #fef7e0; color: #8a6d00; }
+
+        .empty { padding: 2rem 1.3rem; text-align: center; color: #8a958c; }
+        .loading { padding: 2rem 1.3rem; text-align: center; color: rgb(22,140,60); }
+
+        /* Passcode gate */
+        .gate {
+            position: fixed; inset: 0; z-index: 50; background: rgba(247,249,247,0.97);
+            display: flex; align-items: center; justify-content: center;
+        }
+        .gate .box {
+            background: #fff; border: 1px solid rgba(22,140,60,0.12); border-radius: 16px;
+            box-shadow: 0 8px 32px rgba(22,140,60,0.12); padding: 2.5rem 2rem; width: 90%; max-width: 380px; text-align: center;
+        }
+        .gate h1 { font-family: 'PT Serif', serif; color: rgb(15, 100, 42); font-size: 1.6rem; margin-bottom: 0.3rem; }
+        .gate p { font-family: 'Courier New', Courier, monospace; color: rgb(22, 140, 60); font-size: 0.82rem; margin-bottom: 1.5rem; }
+        .gate input {
+            width: 100%; padding: 0.8rem 1rem; border: 1px solid rgba(22,140,60,0.25); border-radius: 8px;
+            font-size: 1rem; margin-bottom: 1rem; outline: none;
+        }
+        .gate input:focus { border-color: rgb(22,140,60); }
+        .gate button { width: 100%; }
+        .gate .err { color: #b3261e; font-family: 'Franklin Gothic Medium', Arial, sans-serif; font-size: 0.85rem; min-height: 1.2rem; margin-top: 0.5rem; }
+
+        /* Toast */
+        #toast {
+            position: fixed; bottom: 1.5rem; left: 50%; transform: translateX(-50%) translateY(120%);
+            background: rgb(15, 100, 42); color: #fff; padding: 0.8rem 1.4rem; border-radius: 10px;
+            box-shadow: 0 6px 24px rgba(0,0,0,0.2); z-index: 60; transition: transform 0.35s ease; font-size: 0.9rem;
+        }
+        #toast.show { transform: translateX(-50%) translateY(0); }
+
+        .src-tag { font-size: 0.72rem; color: #8a958c; }
+        @media (max-width: 640px) {
+            th, td { padding: 0.6rem 0.7rem; }
+            .wrap { padding: 1.5rem 0.8rem 3rem; }
+        }
+    </style>
+</head>
+<body>
+    <div class="check-bg"></div>
+
+    <!-- Passcode gate -->
+    <div id="gate" class="gate">
+        <div class="box">
+            <h1>EDUCHESS</h1>
+            <p>Dev Dashboard — restricted</p>
+            <input id="gateInput" type="password" placeholder="Enter passcode" autocomplete="off" />
+            <button class="btn-primary" id="gateBtn">Unlock</button>
+            <div class="err" id="gateErr"></div>
+        </div>
+    </div>
+
+    <div class="wrap">
+        <header class="topbar">
+            <div class="brand">
+                <h1>EduChess — Dev Dashboard</h1>
+                <p>Demo &amp; Class booking control panel</p>
+            </div>
+            <div class="actions">
+                <button class="btn-ghost" id="refreshBtn">↻ Refresh</button>
+                <button class="btn-danger-solid" id="purgeBtn">Delete all expired demos</button>
+            </div>
+        </header>
+
+        <div class="stats" id="stats"></div>
+
+        <div class="tabs">
+            <button class="tab-btn active" data-tab="demos">Demos</button>
+            <button class="tab-btn" data-tab="classes">Classes</button>
+            <button class="tab-btn" data-tab="accounts">Accounts</button>
+        </div>
+
+        <!-- DEMOS -->
+        <div class="panel active" id="panel-demos">
+            <div class="card">
+                <div class="card-head">
+                    <h2>Demo Bookings</h2>
+                    <span class="src-tag">project: chess-demo-ed80b</span>
+                </div>
+                <div id="demos-body"><div class="loading">Loading…</div></div>
+            </div>
+        </div>
+
+        <!-- CLASSES -->
+        <div class="panel" id="panel-classes">
+            <div class="card">
+                <div class="card-head">
+                    <h2>Class Bookings</h2>
+                    <span class="src-tag">project: chess-cf01f</span>
+                </div>
+                <div id="classes-body"><div class="loading">Loading…</div></div>
+            </div>
+        </div>
+
+        <!-- ACCOUNTS -->
+        <div class="panel" id="panel-accounts">
+            <div class="card">
+                <div class="card-head">
+                    <h2>Accounts</h2>
+                    <span class="src-tag">project: chess-demo-ed80b · users</span>
+                </div>
+                <div id="accounts-body"><div class="loading">Loading…</div></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Confirm modal -->
+    <div id="confirmModal" class="gate" style="display:none; background: rgba(20,30,24,0.45);">
+        <div class="box" style="text-align:left;">
+            <h1 style="font-size:1.3rem; margin-bottom:0.8rem;">Confirm</h1>
+            <p id="confirmMsg" style="font-family:'Franklin Gothic Medium',Arial,sans-serif; color:#3a463d; font-size:0.92rem; white-space:pre-line; margin-bottom:1.5rem;"></p>
+            <div style="display:flex; gap:0.6rem;">
+                <button class="btn-ghost" id="confirmCancel" style="flex:1;">Cancel</button>
+                <button class="btn-danger-solid" id="confirmOk" style="flex:1;">Delete</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="toast"></div>
+
+    <script type="module">
+        import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
+        import { getDatabase, ref, get, remove } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js';
+
+        // ── Light access gate (NOT real security — change this passcode) ──
+        const ADMIN_PASSCODE = 'educhess';
+
+        // ── Firebase: demo project ──
+        const demoConfig = {
+            apiKey: "AIzaSyAyU-6KTAVNhgJrjMMPq8nRdGWVZaZCPB4",
+            authDomain: "chess-demo-ed80b.firebaseapp.com",
+            databaseURL: "https://chess-demo-ed80b-default-rtdb.firebaseio.com",
+            projectId: "chess-demo-ed80b",
+            storageBucket: "chess-demo-ed80b.firebasestorage.app",
+            messagingSenderId: "967444408413",
+            appId: "1:967444408413:web:1fc30027f2db82fb4245b4"
+        };
+
+        // ── Firebase: classes/booking project ──
+        const bookingConfig = {
+            apiKey: "AIzaSyCYxf8GHpL3uIn_qoCwTnDCjwP4zrAwH8I",
+            authDomain: "chess-cf01f.firebaseapp.com",
+            databaseURL: "https://chess-cf01f-default-rtdb.firebaseio.com",
+            projectId: "chess-cf01f",
+            storageBucket: "chess-cf01f.firebasestorage.app",
+            messagingSenderId: "995150306218",
+            appId: "1:995150306218:web:65b9d26ca05c478e73a9d3"
+        };
+
+        const demoApp    = initializeApp(demoConfig, 'demoAdmin');
+        const demoDb     = getDatabase(demoApp);
+        const bookingApp = initializeApp(bookingConfig, 'bookingAdmin');
+        const bookingDb  = getDatabase(bookingApp);
+
+        const dayNames  = ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'];
+        const timeSlots = ['4–5 PM','5–6 PM','6–7 PM','7–8 PM','8–9 PM','9–10 PM'];
+
+        // ── Helpers ──
+        function userKey(username) {
+            return encodeURIComponent((username || '').trim().toLowerCase()).replace(/\./g, '%2E');
+        }
+        function esc(s) {
+            return String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+        }
+        function fmtDate(iso) {
+            if (!iso) return '—';
+            const d = new Date(iso);
+            if (isNaN(d)) return esc(iso);
+            return d.toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' });
+        }
+
+        // Compute when a slot ENDS (first occurrence of weekday@time on/after createdAt)
+        function slotEndTime(createdAtISO, dayIndex, timeIndex) {
+            const created = createdAtISO ? new Date(createdAtISO) : new Date();
+            const targetJsDay = (dayIndex + 1) % 7; // Mon=0 → JS 1, Sun=6 → JS 0
+            const d = new Date(created);
+            const diff = (targetJsDay - d.getDay() + 7) % 7;
+            d.setDate(d.getDate() + diff);
+            d.setHours(17 + timeIndex, 0, 0, 0);
+            if (d.getTime() <= created.getTime()) d.setDate(d.getDate() + 7);
+            return d.getTime();
+        }
+        function isExpired(createdAtISO, dayIndex, timeIndex) {
+            if (typeof dayIndex !== 'number' || typeof timeIndex !== 'number') return false;
+            return Date.now() > slotEndTime(createdAtISO, dayIndex, timeIndex);
+        }
+        function scheduledLabel(createdAtISO, dayIndex, timeIndex) {
+            if (typeof dayIndex !== 'number' || typeof timeIndex !== 'number') return '—';
+            const d = new Date(slotEndTime(createdAtISO, dayIndex, timeIndex));
+            return d.toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' });
+        }
+
+        // ── Toast ──
+        const toast = document.getElementById('toast');
+        function showToast(msg) {
+            toast.textContent = msg;
+            toast.classList.add('show');
+            clearTimeout(toast._t);
+            toast._t = setTimeout(() => toast.classList.remove('show'), 3000);
+        }
+
+        // ── Custom confirm modal (Promise-based, non-blocking) ──
+        const confirmModal = document.getElementById('confirmModal');
+        const confirmMsg = document.getElementById('confirmMsg');
+        let confirmResolver = null;
+        function uiConfirm(message) {
+            confirmMsg.textContent = message;
+            confirmModal.style.display = 'flex';
+            return new Promise(resolve => { confirmResolver = resolve; });
+        }
+        function closeConfirm(result) {
+            confirmModal.style.display = 'none';
+            if (confirmResolver) { confirmResolver(result); confirmResolver = null; }
+        }
+        document.getElementById('confirmOk').addEventListener('click', () => closeConfirm(true));
+        document.getElementById('confirmCancel').addEventListener('click', () => closeConfirm(false));
+        confirmModal.addEventListener('click', e => { if (e.target === confirmModal) closeConfirm(false); });
+
+        // ── State ──
+        const state = { demos: [], classes: [], accounts: [] };
+
+        // ── Load everything ──
+        async function loadAll() {
+            setLoading();
+            try {
+                const [
+                    demoReqSnap, demoUsersSnap,
+                    classReqSnap
+                ] = await Promise.all([
+                    get(ref(demoDb, 'requests')),
+                    get(ref(demoDb, 'users')),
+                    get(ref(bookingDb, 'requests'))
+                ]);
+
+                // Demos
+                state.demos = [];
+                if (demoReqSnap.exists()) {
+                    const all = demoReqSnap.val();
+                    for (const k in all) state.demos.push({ key: k, ...all[k] });
+                }
+                state.demos.sort((a,b) => new Date(b.createdAt||0) - new Date(a.createdAt||0));
+
+                // Classes
+                state.classes = [];
+                if (classReqSnap.exists()) {
+                    const all = classReqSnap.val();
+                    for (const k in all) state.classes.push({ key: k, ...all[k] });
+                }
+                state.classes.sort((a,b) => new Date(b.createdAt||0) - new Date(a.createdAt||0));
+
+                // Accounts
+                state.accounts = [];
+                if (demoUsersSnap.exists()) {
+                    const all = demoUsersSnap.val();
+                    for (const k in all) state.accounts.push({ key: k, ...all[k] });
+                }
+                state.accounts.sort((a,b) => new Date(b.createdAt||0) - new Date(a.createdAt||0));
+
+                renderStats();
+                renderDemos();
+                renderClasses();
+                renderAccounts();
+            } catch (err) {
+                console.error(err);
+                showToast('Failed to load data — check console.');
+            }
+        }
+
+        function setLoading() {
+            document.getElementById('demos-body').innerHTML    = '<div class="loading">Loading…</div>';
+            document.getElementById('classes-body').innerHTML  = '<div class="loading">Loading…</div>';
+            document.getElementById('accounts-body').innerHTML = '<div class="loading">Loading…</div>';
+        }
+
+        function renderStats() {
+            const expired = state.demos.filter(d => isExpired(d.createdAt, d.dayIndex, d.timeIndex)).length;
+            const stats = [
+                { num: state.demos.length,    lbl: 'Demo bookings' },
+                { num: state.classes.length,  lbl: 'Class bookings' },
+                { num: state.accounts.length, lbl: 'Accounts' },
+                { num: expired,               lbl: 'Expired demos' }
+            ];
+            document.getElementById('stats').innerHTML = stats.map(s =>
+                `<div class="stat"><div class="num">${s.num}</div><div class="lbl">${s.lbl}</div></div>`
+            ).join('');
+        }
+
+        function renderDemos() {
+            const body = document.getElementById('demos-body');
+            if (!state.demos.length) { body.innerHTML = '<div class="empty">No demo bookings.</div>'; return; }
+            const rows = state.demos.map(d => {
+                const exp = isExpired(d.createdAt, d.dayIndex, d.timeIndex);
+                const status = exp
+                    ? '<span class="pill pill-exp">Expired</span>'
+                    : '<span class="pill pill-ok">Upcoming</span>';
+                return `<tr>
+                    <td>${esc(d.username)}</td>
+                    <td>${esc(d.day || (dayNames[d.dayIndex] ?? '—'))}</td>
+                    <td>${esc(d.time || (timeSlots[d.timeIndex] ?? '—'))}</td>
+                    <td>${esc(scheduledLabel(d.createdAt, d.dayIndex, d.timeIndex))}</td>
+                    <td>${status}</td>
+                    <td class="mono">${fmtDate(d.createdAt)}</td>
+                    <td><button class="btn-danger" data-act="del-demo" data-key="${esc(d.key)}">Delete</button></td>
+                </tr>`;
+            }).join('');
+            body.innerHTML = `<table>
+                <thead><tr><th>Account</th><th>Day</th><th>Time</th><th>Scheduled</th><th>Status</th><th>Booked at</th><th></th></tr></thead>
+                <tbody>${rows}</tbody></table>`;
+        }
+
+        function renderClasses() {
+            const body = document.getElementById('classes-body');
+            if (!state.classes.length) { body.innerHTML = '<div class="empty">No class bookings.</div>'; return; }
+            const rows = state.classes.map(c => {
+                const days = Array.isArray(c.days) ? c.days.join(', ')
+                           : Array.isArray(c.dayIndices) ? c.dayIndices.map(i => dayNames[i]).join(', ')
+                           : (c.days || '—');
+                const statusPill = c.status
+                    ? `<span class="pill pill-pending">${esc(c.status)}</span>` : '—';
+                return `<tr>
+                    <td>${esc(c.username)}</td>
+                    <td>${esc(days)}</td>
+                    <td>${esc(c.time || (timeSlots[c.timeIndex] ?? '—'))}</td>
+                    <td>${statusPill}</td>
+                    <td class="mono">${fmtDate(c.createdAt)}</td>
+                    <td><button class="btn-danger" data-act="del-class" data-key="${esc(c.key)}">Delete</button></td>
+                </tr>`;
+            }).join('');
+            body.innerHTML = `<table>
+                <thead><tr><th>Account</th><th>Days</th><th>Time</th><th>Status</th><th>Booked at</th><th></th></tr></thead>
+                <tbody>${rows}</tbody></table>`;
+        }
+
+        function renderAccounts() {
+            const body = document.getElementById('accounts-body');
+            if (!state.accounts.length) { body.innerHTML = '<div class="empty">No accounts.</div>'; return; }
+            const rows = state.accounts.map(a => `<tr>
+                <td>${esc(a.username)}</td>
+                <td class="mono">${esc(a.password ?? '—')}</td>
+                <td class="mono">${fmtDate(a.createdAt)}</td>
+            </tr>`).join('');
+            body.innerHTML = `<table>
+                <thead><tr><th>Username</th><th>Password</th><th>Created</th></tr></thead>
+                <tbody>${rows}</tbody></table>`;
+        }
+
+        // ── Deletions ──
+        async function deleteDemo(key) {
+            const rec = state.demos.find(d => d.key === key);
+            if (!rec) return;
+            if (!await uiConfirm(`Delete demo for "${rec.username}" (${rec.day || dayNames[rec.dayIndex]} · ${rec.time || timeSlots[rec.timeIndex]})?\nThis frees the slot and lets the account book again.`)) return;
+            try {
+                const ops = [ remove(ref(demoDb, `requests/${key}`)) ];
+                if (typeof rec.dayIndex === 'number' && typeof rec.timeIndex === 'number') {
+                    ops.push(remove(ref(demoDb, `bookedSlots/${rec.dayIndex}/${rec.timeIndex}`)));
+                }
+                if (rec.username) ops.push(remove(ref(demoDb, `userRequests/${userKey(rec.username)}`)));
+                await Promise.all(ops);
+                showToast('Demo deleted.');
+                await loadAll();
+            } catch (err) { console.error(err); showToast('Delete failed — check console.'); }
+        }
+
+        async function deleteClass(key) {
+            const rec = state.classes.find(c => c.key === key);
+            if (!rec) return;
+            if (!await uiConfirm(`Delete class booking for "${rec.username}"?\nThis frees the booked slots and lets the account book again.`)) return;
+            try {
+                const ops = [ remove(ref(bookingDb, `requests/${key}`)) ];
+                const dayIdxs = Array.isArray(rec.dayIndices) ? rec.dayIndices : [];
+                if (typeof rec.timeIndex === 'number') {
+                    for (const di of dayIdxs) ops.push(remove(ref(bookingDb, `bookedSlots/${di}/${rec.timeIndex}`)));
+                }
+                if (rec.username) ops.push(remove(ref(bookingDb, `userRequests/${userKey(rec.username)}`)));
+                await Promise.all(ops);
+                showToast('Class booking deleted.');
+                await loadAll();
+            } catch (err) { console.error(err); showToast('Delete failed — check console.'); }
+        }
+
+        async function purgeExpiredDemos() {
+            const expired = state.demos.filter(d => isExpired(d.createdAt, d.dayIndex, d.timeIndex));
+            if (!expired.length) { showToast('No expired demos to delete.'); return; }
+            if (!await uiConfirm(`Delete ${expired.length} expired demo(s)? This frees their slots and account flags.`)) return;
+            try {
+                const ops = [];
+                for (const rec of expired) {
+                    ops.push(remove(ref(demoDb, `requests/${rec.key}`)));
+                    if (typeof rec.dayIndex === 'number' && typeof rec.timeIndex === 'number') {
+                        ops.push(remove(ref(demoDb, `bookedSlots/${rec.dayIndex}/${rec.timeIndex}`)));
+                    }
+                    if (rec.username) ops.push(remove(ref(demoDb, `userRequests/${userKey(rec.username)}`)));
+                }
+                await Promise.all(ops);
+                showToast(`Deleted ${expired.length} expired demo(s).`);
+                await loadAll();
+            } catch (err) { console.error(err); showToast('Purge failed — check console.'); }
+        }
+
+        // ── Event wiring ──
+        document.addEventListener('click', (e) => {
+            const btn = e.target.closest('button[data-act]');
+            if (!btn) return;
+            const key = btn.dataset.key;
+            if (btn.dataset.act === 'del-demo')  deleteDemo(key);
+            if (btn.dataset.act === 'del-class') deleteClass(key);
+        });
+
+        document.getElementById('refreshBtn').addEventListener('click', loadAll);
+        document.getElementById('purgeBtn').addEventListener('click', purgeExpiredDemos);
+
+        document.querySelectorAll('.tab-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+                document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+                btn.classList.add('active');
+                document.getElementById('panel-' + btn.dataset.tab).classList.add('active');
+            });
+        });
+
+        // ── Gate ──
+        const gate = document.getElementById('gate');
+        const gateInput = document.getElementById('gateInput');
+        const gateErr = document.getElementById('gateErr');
+        function tryUnlock() {
+            if (gateInput.value === ADMIN_PASSCODE) {
+                sessionStorage.setItem('devUnlocked', '1');
+                gate.style.display = 'none';
+                loadAll();
+            } else {
+                gateErr.textContent = 'Incorrect passcode.';
+            }
+        }
+        document.getElementById('gateBtn').addEventListener('click', tryUnlock);
+        gateInput.addEventListener('keydown', e => { if (e.key === 'Enter') tryUnlock(); });
+
+        if (sessionStorage.getItem('devUnlocked') === '1') {
+            gate.style.display = 'none';
+            loadAll();
+        } else {
+            gateInput.focus();
+        }
+    </script>
+</body>
+</html>
